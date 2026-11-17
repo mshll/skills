@@ -1,0 +1,95 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width"><style>
+body{font:14px/20px system-ui;margin:0;padding:16px;background:#fff;color:#111}
+::selection{background:#cfe0ff}
+section{margin-bottom:32px}
+button{font:inherit;color:inherit}
+
+#c1 .hit{position:relative;width:28px;height:28px;padding:0;border:0;border-radius:6px;background:#eee}
+#c1 .hit::before{content:"";position:absolute;inset:-8px}
+#c1b{display:flex;gap:2px}
+#c1b .dot{position:relative;width:16px;height:16px;padding:0;border:0;border-radius:4px;background:#ddd}
+#c1b .dot::after{content:"";position:absolute;inset:-4px}
+@media (width <= 480px){#c1b{display:none}}
+
+#c2 p{max-width:300px}
+#c2 .ib{display:inline-block}
+#c2 .row{display:flex;gap:12px;align-items:center;max-width:300px;padding:12px 0}
+#c2 .trunc{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+
+#c3 .panel{background:#f2f2f2;padding:16px 16px 40px}
+#c3 .card{border:1px solid #ccc;border-radius:8px;padding:12px}
+#c3 .list{background:#f2f2f2;padding:24px;max-width:360px}
+#c3 .item{background:#fff;border-bottom:1px solid #ccc;padding:12px}
+#c3 .sub{color:#555}
+@media (width <= 480px){#c3 .panel{margin:0 -16px}}
+
+#c4 .legend{display:flex;flex-wrap:wrap;column-gap:16px;row-gap:4px;max-width:240px}
+#c4 .key{display:flex;gap:6px;align-items:center}
+#c4 .sw{width:10px;height:10px;border-radius:2px;background:#36c}
+
+#c5 .rows{max-width:320px}
+#c5 .r{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid #ddd}
+#c5 .r .t{flex:1}
+#c5 .rows + .rows{margin-top:16px}
+
+#c8 .plot{position:relative;background:#f4f6f8;border-radius:8px;padding:16px;max-width:360px;height:160px}
+#c8 .bars{display:flex;align-items:flex-end;gap:8px;height:100%}
+#c8 .bars i{flex:1;background:#36c;display:block}
+#c8 .ref{position:absolute;top:0;bottom:0;left:60%;width:2px;background:#c33}
+#c8 .grid{position:absolute;top:0;left:16px;width:calc(100% - 32px);height:100%}
+
+#c9 .clamp{max-width:220px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#c9 .ell{max-width:160px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#c9 .row{display:grid;grid-template-columns:minmax(0,1fr) 44px;column-gap:14px;align-items:center;max-width:280px}
+#c9 .row button{width:44px;height:44px}
+#c9 .row h4{margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+#c10 .pill{position:relative;min-height:36px;padding:0 12px 0 10px;border:0;border-radius:999px;display:inline-flex;align-items:center;gap:6px;background:#eee;font-weight:600}
+#c10 .pill::before{content:"";position:absolute;inset:-4px 0}
+#c10 .mark{width:16px;height:16px;border-radius:999px;border:1.5px solid currentColor;display:grid;place-items:center;flex:none;box-sizing:border-box}
+#c10 .mark svg{width:12px;height:12px;opacity:0}
+</style></head><body>
+
+<section id="c1"><button class="hit" aria-label="Close">x</button></section>
+<section id="c1b"><button class="dot" aria-label="One"></button><button class="dot" aria-label="Two"></button><button class="dot" aria-label="Three"></button></section>
+
+<section id="c2">
+<p>Your caffeine is still above the sleep line, so the <b>next coffee</b> would keep you up past <strong>eleven at night</strong>; try a <em>smaller cup</em> or a <span class="num">decaf</span> after four.</p>
+<p>Your caffeine is still above the line, so the <b class="ib">next coffee</b> would keep you up past eleven at night; <a href="#" class="ib">see why</a> before the next cup.</p>
+<div class="row"><span class="trunc">Acme Corporation International Holdings Limited</span><span>Due 12 May</span></div>
+</section>
+
+<section id="c3">
+<div class="panel"><div class="card">310 mg in you now<div class="sub">Clears by 23:10, after bed</div></div></div>
+<div class="list" style="margin-top:16px"><div class="item">Morning espresso<div class="sub">08:10, 120 mg</div></div><div class="item">Afternoon flat white<div class="sub">13:40, 130 mg</div></div><div class="item">Evening tea<div class="sub">18:05, 40 mg</div></div></div>
+</section>
+
+<section id="c4"><div class="legend">
+<span class="key"><span class="sw"></span>Espresso</span><span class="key"><span class="sw"></span>Flat white</span><span class="key"><span class="sw"></span>Cold brew</span><span class="key"><span class="sw"></span>Green tea</span>
+</div></section>
+
+<section id="c5"><div class="rows">
+<div class="r"><span class="t">Quarterly invoice for the North American subsidiary, due at end of month</span><span>$120</span></div>
+<div class="r"><span class="t">Annual licence renewal for the design team seats and the shared fonts</span><span>$480</span></div>
+<div class="r"><span class="t">Hosting for the staging cluster and the preview environments in two regions</span><span>$96</span></div>
+</div><div class="rows">
+<div class="r"><span class="t">Morning espresso<br>Double shot, oat milk</span><span>$4</span></div>
+<div class="r"><span class="t">Afternoon flat white<br>Single shot, whole milk</span><span>$5</span></div>
+<div class="r"><span class="t">Evening tea<br>Green, no sugar</span><span>$3</span></div>
+</div></section>
+
+<section id="c8"><div class="plot">
+<div class="bars"><i style="height:40%"></i><i style="height:70%"></i><i style="height:55%"></i><i style="height:90%"></i></div>
+<div class="ref"></div>
+<svg class="grid" aria-hidden="true"><line x1="25%" x2="25%" y1="0" y2="100%" stroke="#ccc"/><line x1="50%" x2="50%" y1="0" y2="100%" stroke="#ccc"/></svg>
+</div></section>
+
+<section id="c9">
+<p class="clamp">Monstera deliciosa by the window had water at 10:30 and <b>again at 14:15</b>, then it was moved to the shelf by the door</p>
+<div class="ell" title="Fiddle leaf fig: 10:30 watering">Fiddle leaf fig: <span>10:30 watering</span></div>
+<div class="row"><h4>Calathea orbifolia on the north sill beside the bookcase in the hall</h4><button aria-label="Log">+</button></div>
+</section>
+
+<section id="c10"><button class="pill"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>250 ml</span></button></section>
+
+</body></html>

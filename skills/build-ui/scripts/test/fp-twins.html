@@ -1,0 +1,66 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width"><style>
+body{font:14px/20px system-ui;margin:0;padding:16px;background:#fff;color:#111}
+::selection{background:#cfe0ff}
+section{margin-bottom:32px}
+button{font:inherit;color:inherit}
+
+#t1 .hit{width:28px;height:28px;padding:0;border:0;border-radius:6px;background:#eee}
+#t1b{display:flex;gap:2px}
+#t1b .dot{width:16px;height:16px;padding:0;border:0;border-radius:4px;background:#ddd}
+
+#t2 .row{display:flex;align-items:center;max-width:300px;padding:12px 0}
+#t2 .trunc{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#t2 .field{display:inline-block;vertical-align:middle;width:120px;height:44px;border:1px solid #999;border-radius:6px;caret-color:#111}
+
+#t3 .tile{background:#f2f2f2;padding:24px 211px 33px 68px;width:max-content}
+#t3 .card{background:#fff;border:1px solid #ccc;border-radius:8px;width:200px;height:80px}
+
+#t4 .legend{display:flex;column-gap:16px}
+#t4 .key{display:flex;gap:6px;align-items:center}
+#t4 .key + .key{margin-left:-14px}
+#t4 .sw{width:10px;height:10px;border-radius:2px;background:#36c}
+
+#t5 .rows{max-width:320px}
+#t5 .r{display:flex;align-items:center;gap:12px;padding:0 16px;height:110px;border-bottom:1px solid #ddd}
+
+#t6 .bar{background:#f2f2f2;padding:4px 20px 34px;max-width:360px}
+#t6 .bar .btn{width:100%;min-height:52px;border:0;border-radius:10px;background:#111;color:#fff}
+
+#t7 .sheet{background:#f6f6f6;border-radius:16px 16px 0 0;padding:4px 20px 20px;max-width:360px}
+#t7 h2{margin:0 0 8px;font-size:17px;line-height:24px}
+
+#t8 .plot{background:#f4f6f8;border-radius:8px;padding:0 16px 16px;max-width:360px;height:160px}
+#t8 .bars{display:flex;align-items:flex-end;gap:8px;height:100%}
+#t8 .bars i{flex:1;background:#36c;display:block}
+
+#t9 .box{max-width:160px;overflow:hidden;white-space:nowrap}
+
+#t10 .pill{position:relative;min-height:36px;padding:0 12px 0 32px;border:0;border-radius:999px;display:inline-flex;align-items:center;gap:6px;background:#eee;font-weight:600}
+#t10 .pill::before{content:"";position:absolute;inset:-4px 0}
+</style></head><body>
+
+<section id="t1"><button class="hit" aria-label="Close">x</button></section>
+<section id="t1b"><button class="dot" aria-label="One"></button><button class="dot" aria-label="Two"></button><button class="dot" aria-label="Three"></button></section>
+
+<section id="t2"><div class="row"><span class="trunc">Acme Corporation International Holdings Limited</span><span>Due 12 May</span></div>
+<p>Amount<span class="field" role="textbox" aria-label="Amount" tabindex="0"></span></p></section>
+
+<section id="t3"><div class="tile"><div class="card"></div></div></section>
+
+<section id="t4"><div class="legend"><span class="key"><span class="sw"></span>Espresso</span><span class="key"><span class="sw"></span>Flat white</span></div></section>
+
+<section id="t5"><div class="rows">
+<div class="r">Morning espresso</div><div class="r">Afternoon flat white</div><div class="r">Evening tea</div>
+</div></section>
+
+<section id="t6"><div class="bar"><button class="btn">Log a drink</button></div></section>
+
+<section id="t7"><div class="sheet"><h2>Log a drink</h2><p>Pick what you just had.</p></div></section>
+
+<section id="t8"><div class="plot"><div class="bars"><i style="height:40%"></i><i style="height:70%"></i><i style="height:55%"></i><i style="height:100%"></i></div></div></section>
+
+<section id="t9"><div class="box">Fiddle leaf fig: <span>10:30 watering and a long tail</span></div></section>
+
+<section id="t10"><button class="pill"><span>250 ml</span></button></section>
+
+</body></html>

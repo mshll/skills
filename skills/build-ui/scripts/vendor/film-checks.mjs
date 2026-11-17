@@ -142,16 +142,17 @@ function detectClipped({ root, S }) {
       const visH = Math.min(r.bottom, c.bottom) - Math.max(r.top, c.top)
       if (visW <= 0 || visH <= 0) break
       const cuts = []
-      if (o.overflowX !== 'visible') {
+      // Words cut by their own ellipsis or line clamp are truncated on purpose
+      if (o.overflowX !== 'visible' && o.textOverflow !== 'ellipsis') {
         if (r.left < c.left - 0.5 && c.left > S.left + 2) cuts.push(`left by ${Math.round(c.left - r.left)}px`)
         if (r.right > c.right + 0.5 && c.right < S.right - 2) cuts.push(`right by ${Math.round(r.right - c.right)}px`)
       }
-      if (o.overflowY !== 'visible') {
+      if (o.overflowY !== 'visible' && o.webkitLineClamp === 'none') {
         if (r.top < c.top - 0.5 && c.top > S.top + 2) cuts.push(`top by ${Math.round(c.top - r.top)}px`)
         if (r.bottom > c.bottom + 0.5 && c.bottom < S.bottom - 2) cuts.push(`bottom by ${Math.round(r.bottom - c.bottom)}px`)
       }
       if (cuts.length) {
-        out.push(`${labelOf(n)} clipped ${cuts.join(', ')} by ${labelOf(a).split(' "')[0]}`)
+        out.push(`clipped: ${labelOf(n)} is cut ${cuts.join(', ')} by ${labelOf(a).split(' "')[0]}; let it wrap, give it room, or truncate with an ellipsis or line clamp`)
         break
       }
       if (a === root) break
@@ -277,9 +278,11 @@ function detectLopsidedPills({ root, scale }) {
     // Bare text counts as content too (a badge's label)
     // Faded out anywhere up to the pill (a States option not showing) isn't content
     const hid = (e) => { for (let a = e; a && a !== p; a = a.parentElement) if (Number(getComputedStyle(a).opacity) < 0.05) return true; return false }
+    // A badge pinned to the pill's corner (a count on a button) sits off-center on purpose
+    const pinned = (e) => { for (let a = e; a && a !== p; a = a.parentElement) if (/absolute|fixed/.test(getComputedStyle(a).position)) return true; return false }
     const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT)
     for (let t = walker.nextNode(); t; t = walker.nextNode()) {
-      if (!t.textContent.trim() || hid(t.parentElement)) continue
+      if (!t.textContent.trim() || hid(t.parentElement) || pinned(t.parentElement)) continue
       const rg = document.createRange()
       rg.selectNodeContents(t)
       const b = rg.getBoundingClientRect()
@@ -292,8 +295,9 @@ function detectLopsidedPills({ root, scale }) {
       if (c.closest('svg') && c.tagName.toLowerCase() !== 'svg') continue
       const b = c.getBoundingClientRect()
       const ccs = getComputedStyle(c)
-      // A knob or thumb is placed on purpose (a switch, a slider)
-      if (b.width < 1 || Number(ccs.opacity) === 0 || ccs.position === 'absolute' || hid(c)) continue
+      // A knob or thumb is placed on purpose (a switch, a slider). A glyph
+      // faded to 0 (a check mark waiting for its tap) still holds its box
+      if (b.width < 1 || ccs.visibility === 'hidden' || ccs.position === 'absolute') continue
       l = Math.min(l, b.left)
       rt = Math.max(rt, b.right)
     }
@@ -725,9 +729,21 @@ function detectFatRow({ root, S, specimen, gridish }) {
       const fs = Math.max(...leaves.map((e) => parseFloat(getComputedStyle(e).fontSize) || 14))
       const tw = Math.max(...leaves.map((e) => e.getBoundingClientRect().width))
       if (tw < r.width * 0.4 || r.width < 120) continue
-      if (r.height > fs * 3.4 && r.height > 48) { fat++; if (!worst || r.height > worst.h) worst = { k, h: r.height, fs } }
+      // Words that wrap (a long title, a name over its detail) make a taller row, not a fatter one
+      let lines = 1, lh = fs * 1.2
+      for (const e of leaves) {
+        const tops = new Set()
+        for (const t of e.childNodes) {
+          if (t.nodeType !== 3 || !t.textContent.trim()) continue
+          const rg = document.createRange()
+          rg.selectNodeContents(t)
+          for (const fr of rg.getClientRects()) if (fr.width > 0) tops.add(Math.round(fr.top))
+        }
+        if (tops.size > lines) { lines = tops.size; lh = parseFloat(getComputedStyle(e).lineHeight) || parseFloat(getComputedStyle(e).fontSize) * 1.2 }
+      }
+      if (r.height > fs * 3.4 + (lines - 1) * lh && r.height > 48) { fat++; if (!worst || r.height > worst.h) worst = { k, h: r.height, fs, lines } }
     }
-    if (rows >= 3 && fat >= 2) out.push(`fat row: ${labelOf(worst.k)} is ${Math.round(worst.h)}px tall for one ${Math.round(worst.fs)}px line (${fat} of ${rows} rows in ${labelOf(n).split(' "')[0]} are); a one-line row is its words plus 8 to 12px of padding each side, and a list fills its pane with more rows, not taller ones`)
+    if (rows >= 3 && fat >= 2) out.push(`fat row: ${labelOf(worst.k)} is ${Math.round(worst.h)}px tall for ${worst.lines === 1 ? 'one' : worst.lines} ${Math.round(worst.fs)}px line${worst.lines === 1 ? '' : 's'} (${fat} of ${rows} rows in ${labelOf(n).split(' "')[0]} are); a one-line row is its words plus 8 to 12px of padding each side, and a list fills its pane with more rows, not taller ones`)
   }
   return out
 }
@@ -854,6 +870,11 @@ function detectUnevenPadding({ root, S, specimen }) {
       // Wholly outside the box it is an overlay or a hidden piece, not content; an illustration
       // straddling the edge (a mascot on a card's rim) is clamped to the box
       if (dr.bottom <= r.top || dr.top >= r.bottom || dr.right <= r.left || dr.left >= r.right) continue
+      // A rule drawn edge to edge (a chart's gridline, a reference line) is not padded content
+      if (ds.position === 'absolute' && dr.top <= r.top + 1 && dr.bottom >= r.bottom - 1) continue
+      // Nor is a sheet's grab handle: a short bar centred at its top
+      const handle = !d.textContent.trim() && dr.height <= 8 && dr.width <= 64 && dr.width >= dr.height * 3 && Math.abs(dr.left + dr.right - r.left - r.right) <= 4 && dr.top - r.top <= 24
+      if (handle) continue
       leaves++; if (d.tagName.toLowerCase() !== 'svg') svgOnly = false
       // A bare text box (a label with its own padding) is judged by its words, not its box
       let ink = dr
@@ -882,7 +903,9 @@ function detectUnevenPadding({ root, S, specimen }) {
     const short = (v) => (v >= 0 ? v < L * 0.7 && L - v >= 4 : v < -4)
     // Equal top and bottom of 8px or more on a wide, short card is a proportion, not a miss
     // So is a bar or strip (a header, a toolbar): wide and short, its vertical padding is set by its height
-    const proportion = (Math.abs(T - B) < 2 && Math.min(T, B) >= 6) || (r.height < 72 && r.width > r.height * 4 && Math.abs(T - B) <= 3)
+    // A bar pinned across the viewport's foot pads its bottom deeper for the home indicator
+    const footBar = /fixed|sticky/.test(cs.position) && r.bottom >= innerHeight - 1 && r.left <= 1 && r.right >= innerWidth - 1 && T >= 8 && B >= T
+    const proportion = (Math.abs(T - B) < 2 && Math.min(T, B) >= 6) || (r.height < 72 && r.width > r.height * 4 && Math.abs(T - B) <= 3) || footBar
     if (!proportion && !bottomHidden && short(B)) tight.push(`bottom ${Math.round(B)}px`)
     if (!proportion && !topHidden && short(T)) tight.push(`top ${Math.round(T)}px`)
     if (tight.length) out.push(`uneven padding: ${labelOf(n).split(' "')[0]} has ${tight.join(', ')} against ${Math.round(L)}px at the side; a card pads its content the same on every side (the outer radius is the inner radius plus the padding)`)
@@ -925,7 +948,18 @@ function detectUnevenGutters({ root, specimen }) {
     const gaps = { left: cr.left - vis.left, right: vis.right - cr.right, bottom: vis.bottom - cr.bottom }
     // Any edge at or past the visible edge is a bleed: a deliberate crop
     if (Object.values(gaps).some((g) => g <= 1)) continue
-    const lo = Math.min(gaps.left, gaps.right, gaps.bottom), hi = Math.max(gaps.left, gaps.right, gaps.bottom)
+    // A row filling its list, inset by the list's own padding on both sides,
+    // with rows below it: the bottom gap is the rest of the list
+    const list = c.parentElement, ls = getComputedStyle(list), cs = getComputedStyle(c)
+    const content = list.getBoundingClientRect()
+    const insetL = cr.left - content.left - parseFloat(ls.borderLeftWidth), insetR = content.right - parseFloat(ls.borderRightWidth) - cr.right
+    const padded = Math.abs(insetL - parseFloat(ls.paddingLeft)) <= 1 && Math.abs(insetR - parseFloat(ls.paddingRight)) <= 1 && Math.abs(insetL - insetR) <= 1
+    const next = c.nextElementSibling
+    if (padded && parseFloat(cs.marginLeft) === 0 && parseFloat(cs.marginRight) === 0 && next && !/^(absolute|fixed)$/.test(getComputedStyle(next).position)) continue
+    // A side where the panel runs to the viewport's edge (a full-bleed phone panel) holds the page gutter, not a frame
+    const framed = Object.entries(gaps).filter(([side]) => !(side === 'left' ? pr.left <= 1 : side === 'right' ? pr.right >= innerWidth - 1 : pr.bottom >= innerHeight - 1)).map(([, g]) => g)
+    if (framed.length < 2) continue
+    const lo = Math.min(...framed), hi = Math.max(...framed)
     if (hi - lo >= 14 && hi > lo * 1.6) out.push(`uneven gutters: ${labelOf(c).split(' "')[0]} sits ${Math.round(gaps.left)}px from the left of ${labelOf(p).split(' "')[0]}, ${Math.round(gaps.right)}px from the right and ${Math.round(gaps.bottom)}px from the bottom; bleed it off an edge, or keep one gutter on every side it doesn't bleed`)
   }
   return out
@@ -1302,6 +1336,30 @@ function ownClip(n, r0, root) {
   }
   return r.right - r.left < 2 || r.bottom - r.top < 2 ? null : r
 }
+// A rect cut to the box of an element that clips it (an ellipsis, a line clamp)
+function clipTo(r, el) {
+  const cs = getComputedStyle(el), e = el.getBoundingClientRect()
+  const [left, right] = cs.overflowX === 'visible' ? [r.left, r.right] : [Math.max(r.left, e.left), Math.min(r.right, e.right)]
+  const [top, bottom] = cs.overflowY === 'visible' ? [r.top, r.bottom] : [Math.max(r.top, e.top), Math.min(r.bottom, e.bottom)]
+  return new DOMRect(left, top, Math.max(0, right - left), Math.max(0, bottom - top))
+}
+// The words as painted: each line clipped by every box between it and el
+// (an ellipsis inside a cell paints only up to its own edge)
+function paintedText(el) {
+  const rr = document.createRange()
+  let box = null
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+  for (let tn = walker.nextNode(); tn; tn = walker.nextNode()) {
+    if (!tn.textContent.trim()) continue
+    rr.selectNodeContents(tn)
+    for (let r of rr.getClientRects()) {
+      for (let a = tn.parentElement; a; a = a === el ? null : a.parentElement) r = clipTo(r, a)
+      if (r.width <= 0 || r.height <= 0) continue
+      box = box ? new DOMRect(Math.min(box.left, r.left), Math.min(box.top, r.top), Math.max(box.right, r.right) - Math.min(box.left, r.left), Math.max(box.bottom, r.bottom) - Math.min(box.top, r.top)) : r
+    }
+  }
+  return box ?? new DOMRect()
+}
 function animating(n, busy, root) { for (let a = n; a && a !== root; a = a.parentElement) if (busy.has(a)) return true; return false }
 function shownArea(r, V) { return Math.max(0, Math.min(r.right, V.right) - Math.max(r.left, V.left)) * Math.max(0, Math.min(r.bottom, V.bottom) - Math.max(r.top, V.top)) }
 // A satellite: an absolute surface with its own shadow, or a phone (its
@@ -1511,17 +1569,15 @@ function detectTouchingText({ root }) {
     if (n.closest('.ss-cursor, .ss-keys, .ss-kb, svg')) continue
     const texts = [...n.childNodes].filter((c) => c.nodeType === 3 && c.textContent.trim())
     if (!texts.length || !shown(n, root)) continue
-    const range = document.createRange()
-    range.setStart(texts[0], 0)
-    range.setEnd(texts[texts.length - 1], texts[texts.length - 1].length)
-    let t = range.getBoundingClientRect()
-    // Text cut by its own box (an ellipsis) only paints inside that box
-    const ns = getComputedStyle(n)
-    if (ns.overflowX !== 'visible') {
-      const nb = n.getBoundingClientRect()
-      t = new DOMRect(Math.max(t.left, nb.left), t.top, Math.min(t.right, nb.right) - Math.max(t.left, nb.left), t.height)
-    }
-    if (t.width < 2) continue
+    // One rect per line of its own words: a paragraph's union box holds
+    // every inline-block set in its lines, which are words of the same run
+    // Text cut by its own box (an ellipsis, a line clamp) only paints inside that box
+    const frags = texts.flatMap((tn) => {
+      const range = document.createRange()
+      range.selectNodeContents(tn)
+      return [...range.getClientRects()].map((fr) => clipTo(fr, n))
+    }).filter((fr) => fr.width >= 2 && fr.height > 0)
+    if (!frags.length) continue
     const p = n.parentElement
     const pairs = [...(p ? [...p.children].filter((c) => c !== n).map((c) => [c, p]) : []), ...[...n.children].map((c) => [c, n])]
     for (const [c, holder] of pairs) {
@@ -1539,17 +1595,17 @@ function detectTouchingText({ root }) {
       // A bare cell (a grid column, a span of words) is judged by its words,
       // a surface (a field, a chip) by its box
       let b = c.getBoundingClientRect()
-      if (!hasSurface(cc) && c.tagName !== 'svg' && (c.textContent || '').trim()) {
-        const rr = document.createRange()
-        rr.selectNodeContents(c)
-        b = rr.getBoundingClientRect()
-      }
+      if (!hasSurface(cc) && c.tagName !== 'svg' && (c.textContent || '').trim()) b = paintedText(c)
       if (b.width < 4 || b.height < 4 || c.contains(n)) continue
       // On one line: overlapping and centered alike (a big clock's glyph box
       // reaches up past the date above it without sharing its line)
-      const sameLine = Math.min(t.bottom, b.bottom) - Math.max(t.top, b.top) > 0.5 * Math.min(t.height, b.height) && Math.abs((t.top + t.bottom) / 2 - (b.top + b.bottom) / 2) < 0.5 * Math.min(t.height, b.height)
-      if (!sameLine) continue
-      const d = b.left >= t.right - 1 ? b.left - t.right : t.left >= b.right - 1 ? t.left - b.right : -1
+      const sameLine = (t) => Math.min(t.bottom, b.bottom) - Math.max(t.top, b.top) > 0.5 * Math.min(t.height, b.height) && Math.abs((t.top + t.bottom) / 2 - (b.top + b.bottom) / 2) < 0.5 * Math.min(t.height, b.height)
+      const line = frags.filter(sameLine)
+      if (!line.length) continue
+      // Its own words before and after it: it is set inside the run
+      if (holder === n && texts.some((tn) => tn.compareDocumentPosition(c) & Node.DOCUMENT_POSITION_FOLLOWING) && texts.some((tn) => tn.compareDocumentPosition(c) & Node.DOCUMENT_POSITION_PRECEDING)) continue
+      const gapTo = (t) => b.left >= t.right - 1 ? b.left - t.right : t.left >= b.right - 1 ? t.left - b.right : -1
+      const d = Math.min(...line.map(gapTo))
       const fixed = parseFloat(getComputedStyle(holder).columnGap) >= 4
       if (d < 5 && !(fixed && d >= 2)) out.push(`touching: ${tagOf(n)} "${n.textContent.trim().slice(0, 18)}" is ${d < 0 ? 'overlapping' : `${px(d)}px from`} ${tagOf(c)}; text never touches a neighboring box, so hold the pair apart with a fixed gap (gap: 8-12px), not leftover space`)
     }
@@ -2090,8 +2146,13 @@ export function detectSpills(root) {
       return { L, R, k }
     }
     const xs = kids.map(extent)
+    const rr = row.getBoundingClientRect()
+    const inside = (x) => x.L >= rr.left + parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft) - 1 && x.R <= rr.right - parseFloat(cs.borderRightWidth) - parseFloat(cs.paddingRight) + 1
     for (let i = 0; i + 1 < xs.length; i++) {
       const a = xs[i], b = xs[i + 1]
+      // Wrapped onto the next flex line and still inside the row: no gap to close
+      const ar = a.k.getBoundingClientRect(), br = b.k.getBoundingClientRect()
+      if (br.top >= ar.bottom - 1 && inside(a) && inside(b)) continue
       const g = b.L - a.R
       if (g > gap - 3 || [...flagged].some((f) => a.k.contains(f) || b.k.contains(f))) continue
       if (!control(a.k) && !a.k.querySelector('*')) continue
@@ -2112,7 +2173,7 @@ export function filmChecksSource() {
     detectClipped, detectPaddingRunIns, detectCoveredCopy, detectLopsidedPills,
     collectSurfaces, detectEdgeTangents, detectUnclipped, detectTightBars, detectDoubleCorner, detectPairTangents,
     detectTranslucentIcons, detectSkeletonLadder, detectLooseList, detectTightControl, detectInventedMark, detectNearAligned, detectUnevenInset, detectMixedIcons, detectEmojiIcon, detectFatRow, detectEmptyPane, detectTightInset, detectUnevenPadding, detectUnevenGutters, detectPillInset, detectTightStack, detectKitOverride, detectClippedGlyph, detectUnitWrapped, detectUnsizedText, detectOnionSkin, detectTightMark, detectRowRhythm, detectHalfPixelGlyph, detectSqueezed,
-    frameContext, ownClip, animating, shownArea, satellite,
+    frameContext, ownClip, clipTo, paintedText, animating, shownArea, satellite,
     detectHeroFraming, detectSatelliteGutters, detectBoxEdges, detectSliverColumn, detectOverlayRoom, detectTouchingText, detectPseudoRing, detectDraftHang, detectBylineGap, detectTouchingBars, detectDarkSlab, detectLightsTangent, detectShadowHalo, detectFocusFeather, detectTargetsCut, detectWordsCut, detectControlsCut,
     checkStage, smallestText, detectSpills,
   ]
